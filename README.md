@@ -1,42 +1,67 @@
-Unsupervised Learning with Autoencoders for Data Dimensionality Reduction
-This project demonstrates the use of autoencoders, a class of neural networks, for dimensionality reduction in an unsupervised learning setting. Autoencoders are particularly useful for extracting meaningful representations from high-dimensional data while preserving important information.
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.datasets import mnist
 
-Overview:
+# Load the MNIST dataset
+(x_train, _), (x_test, _) = mnist.load_data()
 
-Dimensionality reduction is a crucial step in preprocessing high-dimensional data to improve computational efficiency and enable better visualization. Autoencoders achieve this by compressing the input data into a smaller latent space and reconstructing it back to the original dimension.
+# Normalize the data to the range of [0, 1]
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
 
-This project implements:
+# Flatten the 28x28 images into vectors of size 784
+x_train = x_train.reshape((x_train.shape[0], -1))
+x_test = x_test.reshape((x_test.shape[0], -1))
 
-Encoder: Maps high-dimensional data to a lower-dimensional latent space.
-Decoder: Reconstructs the original data from the latent space representation.
-Dimensionality Reduction: The encoder's output provides a compressed, meaningful representation of the input data.
-Key Features
-Unsupervised Learning: Autoencoders learn without labeled data by minimizing the reconstruction loss between input and output.
-Dimensionality Reduction: The latent space representation can be used for tasks like visualization, clustering, and as input for other machine learning models.
-Customizable Architecture: You can adjust the size of the latent space and network layers to fit your dataset and task.
+# Define the dimensions of the autoencoder
+input_dim = x_train.shape[1]  # 784
+encoding_dim = 32  # Dimension for the latent space
 
-Use Case Example:
+# Define the autoencoder
+input_layer = Input(shape=(input_dim,))
+encoded = Dense(encoding_dim, activation='relu')(input_layer)
+decoded = Dense(input_dim, activation='sigmoid')(encoded)
 
-In this project, the MNIST dataset (handwritten digits) is used to:
+# Build the autoencoder model
+autoencoder = Model(inputs=input_layer, outputs=decoded)
 
-Compress the 28x28 images into a 64-dimensional latent space.
-Reconstruct the original images from the reduced representation.
-Visualize the compressed data in 2D using techniques like t-SNE.
-Requirements
-Python 3.7+
-TensorFlow/Keras
-NumPy
-Matplotlib
-Scikit-learn
-Results
-The autoencoder successfully reduces the dimensionality of the data while retaining important features. For example:
+# Build the encoder model
+encoder = Model(inputs=input_layer, outputs=encoded)
 
-Original and reconstructed MNIST images show minimal loss of quality.
-Latent space representations provide a compact yet meaningful summary of the data.
-Applications
-Autoencoders for dimensionality reduction can be applied in:
+# Compile the autoencoder
+autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
 
-Data compression: Reduce storage and memory requirements.
-Feature extraction: Create meaningful features for downstream tasks.
-Anomaly detection: Identify outliers based on reconstruction error.
-Data visualization: Visualize high-dimensional data in 2D or 3D.
+# Train the autoencoder
+autoencoder.fit(x_train, x_train,
+                epochs=50,
+                batch_size=256,
+                shuffle=True,
+                validation_data=(x_test, x_test))
+
+# Use the encoder to transform the test data
+encoded_data = encoder.predict(x_test)
+
+# Visualize some original and reconstructed images
+decoded_images = autoencoder.predict(x_test)
+
+n = 10  # Number of images to display
+plt.figure(figsize=(10, 4))
+for i in range(n):
+    # Display original images
+    ax = plt.subplot(2, n, i + 1)
+    plt.imshow(x_test[i].reshape(28, 28), cmap='gray')
+    plt.title("Original")
+    plt.axis('off')
+
+    # Display reconstructed images
+    ax = plt.subplot(2, n, i + 1 + n)
+    plt.imshow(decoded_images[i].reshape(28, 28), cmap='gray')
+    plt.title("Reconstructed")
+    plt.axis('off')
+
+plt.show()
+
+# Print the dimensions of the encoded data
+print("Encoded data shape:", encoded_data.shape)
